@@ -1,0 +1,79 @@
+End-to-End Machine Learning Project: Telco Customer Churn
+From data to deployment with MLflow, FastAPI & AWS. This presentation walks through a complete ML solution that predicts customer churn, from initial data exploration to production deployment.
+
+
+The Problem & Dataset
+Churn represents customers who leave a service - a critical business
+challenge since:
+. Customer retention costs 5-25x less than acquisition
+· Dataset contains ~28,000 customers with 20+ features
+· Target variable: Churn (Yes/No)
+· Features include demographics, contract types, usage patterns, and monthly charges
+Dataset link: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
+
+
+Tools Overview
+
+Our tech stack leverages industry-standard tools for each stage of the ML lifecycle:
+
+Data Validation - Great Expectations ensures data quality and schema consistency
+
+ML Tracking - MLflow logs experiments, metrics, and artifacts
+
+Modeling - XGBoost classifier handles the binary prediction task
+
+Serving - FastAPI provides REST endpoints and Gradio offers a web UI
+
+Containerization - Docker packages the application for consistent deployment
+
+Deployment - AWS ECS hosts the containerized application
+
+
+
+
+ML end-to-end Flow
+
+1. Python Env + Venv + Library setup
+
+2. Exploratory Data Analysis
+Business metric to optimize - Recall
+Recall - of all the customers who will churn , how many did we identify correctly? 
+It calculates how many true churn cases were captured out of the total number of customers who actually churned, making it critical for ensuring at-risk customers are not missed.
+Prioritizing recall often results in more false positives (flagging customers who would have stayed anyway), so the ideal balance depends on whether a business prefers to err on the side of missing churners or over-investing in retention efforts.
+
+
+3. Modularize EDA into Python scripts (Load, preprocess, train, tune, evaluate, test)
+Turn notebook into Python scripts (modules)
+· Data & Preprocessing Scripts:
+o Loading raw data
+o Running data quality checks (Great Expectations)
+o Preprocessing (cleaning, transformations)
+· Feature Engineering Script:
+o Encoding (binary + one-hot)
+o Handling categorical/numerical transformations
+. Model Training Script:
+o Training ML models
+o Hyperparameter tuning (Optuna)
+o Evaluation (metrics, sanity checks, tests)
+· Pipeline Orchestration Script (run_pipeline.py):
+o Ties everything together into a reproducible training flow
+o Runs sequentially: load - validate - preprocess - feature engineering
+· Experiment Tracking (MLflow):
+o Every run captured in mlruns/
+o Logs include:
+. Artifacts: trained model. pkl
+. Metrics: accuracy, ROC AUC, log loss, etc.
+· Parameters: hyperparameters, preprocessing details
+. Versioning: record of all runs for reproducibility & traceability
+
+
+
+4. Training + Tracking + Hyperparameter tuning (Optuna, MLFlow)
+
+5. Serving Layer + UI [FastAPI (HTTP endpoint) + Gradio (UI)]
+
+6. Containerization (Docker image build)
+
+7. CI/CD - GitHub Actions (Buid, smoke tests, push to DockerHub or ECR)
+
+8. AWS Deployment + End users (ECS, ECR, ALB, CloudWatch monitoring)

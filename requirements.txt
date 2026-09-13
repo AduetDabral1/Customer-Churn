@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+pydantic
+scikit-learn
+numpy
+pandas
+joblib
+mlflow
+pytest
+great-expectations
+seaborn
+matplotlib
+xgboost
+lightgbm
+optuna
+plotly
