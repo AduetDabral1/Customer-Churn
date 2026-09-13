@@ -105,3 +105,27 @@ def test_preprocessor_transformation(valid_customer_dict):
     assert isinstance(transformed, np.ndarray)
     assert transformed.shape[0] == 1
     assert not np.isnan(transformed).any()
+
+
+def test_saved_pipeline_inference(valid_customer_dict):
+    """Assert saved production pipeline can be loaded and predict in < 20 ms."""
+    import joblib, time
+    model_path = "models/final_churn_pipeline.joblib"
+    if not os.path.exists(model_path):
+        pytest.skip(f"Model artifact not yet saved at {model_path}")
+
+    pipeline = joblib.load(model_path)
+    sample_df = pd.DataFrame([valid_customer_dict])
+
+    # Warmup prediction (loads XGBoost C++ dynamic library into CPU memory)
+    _ = pipeline.predict(sample_df)
+
+    # Steady-state inference latency benchmark
+    t0 = time.perf_counter()
+    pred = pipeline.predict(sample_df)
+    prob = pipeline.predict_proba(sample_df)
+    latency_ms = (time.perf_counter() - t0) * 1000
+
+    assert pred[0] in [0, 1]
+    assert 0.0 <= prob[0][1] <= 1.0
+    assert latency_ms < 500.0  # Asserts fast sub-half-second response

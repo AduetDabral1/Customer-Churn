@@ -7,7 +7,6 @@ import sys
 import time
 import argparse
 import logging
-import pandas as pd
 
 from src.data_pipeline import load_and_clean_data, prepare_splits, build_preprocessor
 from src.model_pipeline import tune_xgboost, train_and_log_champion_model
@@ -75,6 +74,8 @@ def run(
     artifact_size_kb = os.path.getsize(model_path) / 1024
 
     sample_input = X_test.head(1)
+    # Warmup prediction (loads model weights into CPU cache)
+    _ = final_pipeline.predict_proba(sample_input)
     t0 = time.perf_counter()
     _ = final_pipeline.predict_proba(sample_input)
     latency_ms = (time.perf_counter() - t0) * 1000

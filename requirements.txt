@@ -7,7 +7,6 @@ pandas
 joblib
 mlflow
 pytest
-great-expectations
 seaborn
 matplotlib
 xgboost

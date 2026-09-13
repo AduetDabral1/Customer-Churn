@@ -6,11 +6,9 @@ import os
 import logging
 from typing import Literal, Optional, Tuple, List
 import pandas as pd
-import numpy as np
-from pydantic import BaseModel, Field, ValidationError, ConfigDict
-from sklearn.base import BaseEstimator, TransformerMixin
+from pydantic import BaseModel, Field, ValidationError, ConfigDict, TypeAdapter
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 
@@ -86,13 +84,17 @@ class CustomerPredictionResponse(BaseModel):
     threshold_used: float = Field(description="Decision threshold used to assign the prediction")
 
 
+# Cached Pydantic TypeAdapter for batch validation performance
+CUSTOMER_LIST_ADAPTER = TypeAdapter(List[CustomerInputSchema])
+
+
 # ==========================================
 # 2. Data Loading, Cleaning & Pydantic Validation
 # ==========================================
 def load_and_clean_data(file_path: str, validate_samples: int = 500) -> pd.DataFrame:
     """
     Loads raw customer churn CSV, parses TotalCharges, drops identifier column,
-    and validates records against CustomerInputSchema.
+    and validates records against CustomerInputSchema using Pydantic TypeAdapter.
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Dataset file not found at: {file_path}")
@@ -104,29 +106,19 @@ def load_and_clean_data(file_path: str, validate_samples: int = 500) -> pd.DataF
     # 1. Clean TotalCharges (blank spaces to numeric, fill 0 where tenure == 0)
     df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
     df.loc[df["tenure"] == 0, "TotalCharges"] = 0.0
-    if df["TotalCharges"].isna().sum() > 0:
-        df["TotalCharges"] = df["TotalCharges"].fillna(df["TotalCharges"].median())
+    df["TotalCharges"] = df["TotalCharges"].fillna(df["TotalCharges"].median())
 
     # 2. Drop pure identifier column
     df = df.drop(columns=["customerID"], errors="ignore")
 
-    # 3. Pydantic validation check on sample records
-    logger.info(f"Validating {validate_samples} records with Pydantic CustomerInputSchema...")
+    # 3. Native Pydantic validation via TypeAdapter
+    logger.info(f"Validating {validate_samples} records with Pydantic TypeAdapter...")
     sample_records = df.head(validate_samples).to_dict(orient="records")
-    validation_errors = 0
-
-    for i, record in enumerate(sample_records):
-        try:
-            CustomerInputSchema(**record)
-        except ValidationError as e:
-            validation_errors += 1
-            if validation_errors <= 3:
-                logger.warning(f"Validation error in record {i}: {e.errors()}")
-
-    if validation_errors > 0:
-        logger.warning(f"Detected {validation_errors} validation discrepancies out of {validate_samples} records.")
-    else:
-        logger.info("All sampled records passed Pydantic validation successfully!")
+    try:
+        CUSTOMER_LIST_ADAPTER.validate_python(sample_records)
+        logger.info(f"All {validate_samples} sampled records passed Pydantic validation successfully!")
+    except ValidationError as e:
+        logger.warning(f"Pydantic validation detected schema discrepancies: {e.errors()[:3]}")
 
     return df
 
@@ -159,57 +151,50 @@ def prepare_splits(
 
 
 # ==========================================
-# 3. Feature Engineering & ColumnTransformer
+# 3. Native Feature Engineering & ColumnTransformer
 # ==========================================
-class ChurnFeatureEngineer(BaseEstimator, TransformerMixin):
+def engineer_domain_features(X: pd.DataFrame) -> pd.DataFrame:
     """
-    Scikit-learn compatible transformer that applies row-level domain features
-    and simplifies redundant categories. Safe from data leakage.
+    Stateless transformation function for scikit-learn's FunctionTransformer.
+    Simplifies redundant categories and adds domain interaction features using vectorized pandas.
     """
-    def __init__(self):
-        self.replace_no_internet = [
-            "OnlineSecurity", "OnlineBackup", "DeviceProtection",
-            "TechSupport", "StreamingTV", "StreamingMovies"
-        ]
+    X = X.copy()
 
-    def fit(self, X, y=None):
-        return self
+    # 1. Simplify redundant 'No internet service' and 'No phone service'
+    service_cols = [
+        "OnlineSecurity", "OnlineBackup", "DeviceProtection",
+        "TechSupport", "StreamingTV", "StreamingMovies", "MultipleLines"
+    ]
+    existing_services = [c for c in service_cols if c in X.columns]
+    if existing_services:
+        X[existing_services] = X[existing_services].replace({
+            "No internet service": "No",
+            "No phone service": "No"
+        })
 
-    def transform(self, X):
-        X = X.copy()
+    # 2. Add domain features: Total count of active services & contract commitment
+    active_cols = [
+        "PhoneService", "MultipleLines", "OnlineSecurity", "OnlineBackup",
+        "DeviceProtection", "TechSupport", "StreamingTV", "StreamingMovies"
+    ]
+    existing_active = [c for c in active_cols if c in X.columns]
+    if existing_active:
+        total_active = (X[existing_active] == "Yes").sum(axis=1)
+        if "InternetService" in X.columns:
+            total_active = total_active + (X["InternetService"] != "No").astype(int)
+        X["TotalServices"] = total_active
 
-        # 1. Simplify redundant categories
-        for col in self.replace_no_internet:
-            if col in X.columns:
-                X[col] = X[col].replace({"No internet service": "No"})
+    if "Contract" in X.columns:
+        X["IsLongTermContract"] = (X["Contract"] != "Month-to-month").astype(int)
 
-        if "MultipleLines" in X.columns:
-            X["MultipleLines"] = X["MultipleLines"].replace({"No phone service": "No"})
-
-        # 2. Add domain features
-        if "PhoneService" in X.columns and "InternetService" in X.columns:
-            X["TotalServices"] = (
-                (X["PhoneService"] == "Yes").astype(int) +
-                (X["MultipleLines"] == "Yes").astype(int) +
-                (X["InternetService"] != "No").astype(int) +
-                (X["OnlineSecurity"] == "Yes").astype(int) +
-                (X["OnlineBackup"] == "Yes").astype(int) +
-                (X["DeviceProtection"] == "Yes").astype(int) +
-                (X["TechSupport"] == "Yes").astype(int) +
-                (X["StreamingTV"] == "Yes").astype(int) +
-                (X["StreamingMovies"] == "Yes").astype(int)
-            )
-
-        if "Contract" in X.columns:
-            X["IsLongTermContract"] = (X["Contract"] != "Month-to-month").astype(int)
-
-        return X
+    return X
 
 
 def build_preprocessor() -> Pipeline:
     """
-    Builds the unified feature engineering and encoding/scaling pipeline.
-    Output features are completely numeric and ready for XGBoost.
+    Builds the feature engineering and encoding/scaling pipeline using
+    scikit-learn's native FunctionTransformer and ColumnTransformer.
+    Eliminates custom class boilerplate and guarantees 100% standard serialization.
     """
     cat_cols = [
         "gender", "Partner", "Dependents", "PhoneService", "MultipleLines",
@@ -230,7 +215,7 @@ def build_preprocessor() -> Pipeline:
     )
 
     full_preprocessor = Pipeline(steps=[
-        ("feature_engineering", ChurnFeatureEngineer()),
+        ("feature_engineering", FunctionTransformer(engineer_domain_features)),
         ("encoding_and_scaling", encoding_scaling_block)
     ])
 

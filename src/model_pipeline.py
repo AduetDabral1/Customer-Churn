@@ -18,8 +18,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
-    f1_score, roc_auc_score, confusion_matrix,
-    ConfusionMatrixDisplay, roc_curve, precision_recall_curve
+    f1_score, roc_auc_score,
+    ConfusionMatrixDisplay, RocCurveDisplay, precision_recall_curve
 )
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ def tune_xgboost(
             y_train,
             cv=cv,
             scoring={"recall": "recall", "roc_auc": "roc_auc", "precision": "precision"},
-            n_jobs=-1
+            n_jobs=1  # Avoid nested thread lock with XGBoost's internal n_jobs=-1
         )
 
         mean_recall = cv_results["test_recall"].mean()
@@ -139,11 +139,8 @@ def train_and_log_champion_model(
         # 1. Decision threshold tuning for business recall
         # Search for threshold that achieves maximum recall while keeping precision >= 0.50
         precisions, recalls, thresholds = precision_recall_curve(y_test, y_test_prob)
-        calibrated_threshold = 0.40  # Default robust operating threshold
-        for p, r, t in zip(precisions[:-1], recalls[:-1], thresholds):
-            if r >= 0.80 and p >= 0.50:
-                calibrated_threshold = float(t)
-                break
+        mask = (recalls[:-1] >= 0.80) & (precisions[:-1] >= 0.50)
+        calibrated_threshold = float(thresholds[mask][0]) if np.any(mask) else 0.40
 
         y_test_pred_calibrated = (y_test_prob >= calibrated_threshold).astype(int)
 
@@ -166,11 +163,16 @@ def train_and_log_champion_model(
         mlflow.log_params(params)
         mlflow.log_metrics(test_metrics)
 
-        # 4. Generate & log diagnostic figures
+        # 4. Generate & log diagnostic figures using built-in scikit-learn display classes
         # A. Confusion Matrix
         fig_cm, ax_cm = plt.subplots(figsize=(6, 5))
-        cm = confusion_matrix(y_test, y_test_pred_calibrated)
-        ConfusionMatrixDisplay(cm, display_labels=["Stayed (0)", "Churned (1)"]).plot(ax=ax_cm, cmap="Blues")
+        ConfusionMatrixDisplay.from_predictions(
+            y_test,
+            y_test_pred_calibrated,
+            display_labels=["Stayed (0)", "Churned (1)"],
+            cmap="Blues",
+            ax=ax_cm
+        )
         ax_cm.set_title(f"Confusion Matrix (Threshold={calibrated_threshold:.2f})")
         ax_cm.grid(False)
         mlflow.log_figure(fig_cm, "confusion_matrix.png")
@@ -178,13 +180,14 @@ def train_and_log_champion_model(
 
         # B. ROC Curve
         fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
-        fpr, tpr, _ = roc_curve(y_test, y_test_prob)
-        ax_roc.plot(fpr, tpr, color="#2ecc71", lw=2, label=f"ROC Curve (AUC = {test_metrics['test_roc_auc']:.4f})")
-        ax_roc.plot([0, 1], [0, 1], color="gray", linestyle="--")
+        RocCurveDisplay.from_predictions(
+            y_test,
+            y_test_prob,
+            name=f"XGBoost (AUC = {test_metrics['test_roc_auc']:.4f})",
+            ax=ax_roc,
+            plot_chance_level=True
+        )
         ax_roc.set_title("ROC Curve")
-        ax_roc.set_xlabel("False Positive Rate")
-        ax_roc.set_ylabel("True Positive Rate")
-        ax_roc.legend(loc="lower right")
         mlflow.log_figure(fig_roc, "roc_curve.png")
         plt.close(fig_roc)
 
@@ -211,7 +214,15 @@ def train_and_log_champion_model(
         artifact_size_kb = os.path.getsize(model_path) / 1024
         logger.info(f"Saved compressed pipeline artifact to {model_path} ({artifact_size_kb:.1f} KB)")
 
-        # Log model to MLflow model registry/artifacts
-        mlflow.sklearn.log_model(final_pipeline, artifact_path="churn_pipeline")
+        # Log model artifact to MLflow
+        mlflow.log_artifact(model_path, artifact_path="model_artifact")
+        try:
+            mlflow.sklearn.log_model(
+                final_pipeline,
+                name="churn_pipeline",
+                serialization_format="pickle"
+            )
+        except Exception as e:
+            logger.warning(f"MLflow log_model notice: {e}. Model artifact was safely logged via log_artifact.")
 
         return final_pipeline, test_metrics, calibrated_threshold
