@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Churn Intelligence | Executive Retention Dashboard</title>
+  
+  <!-- Modern Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand" id="navBrand" style="cursor: pointer;">
+        <div class="brand-icon">Ω</div>
+        <div class="brand-text">
+          <h1>RETENTION IQ</h1>
+          <span>Customer Churn Diagnostic Engine</span>
+        </div>
+      </div>
+      
+      <div class="nav-meta">
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          <span>Model: <strong>Active (0.36 Threshold)</strong></span>
+        </div>
+        
+        <!-- See Examples Dropdown Button -->
+        <div class="examples-menu-wrapper">
+          <button type="button" class="btn-examples" id="btnToggleExamples">
+            <span>💡 See Examples</span>
+            <span class="arrow-down" id="arrowExamples">▼</span>
+          </button>
+          
+          <div class="examples-dropdown" id="examplesDropdown">
+            <div class="dropdown-header">Pre-configured Test Personas</div>
+            
+            <div class="example-item" id="exampleHighRisk">
+              <div class="example-badge danger">High Risk</div>
+              <div class="example-info">
+                <h4>⚡ High Churn Vulnerability</h4>
+                <p>Month-to-month, Fiber optic, 2 mo tenure, no tech support ($95.50/mo)</p>
+              </div>
+            </div>
+
+            <div class="example-item" id="exampleLoyal">
+              <div class="example-badge success">Loyal</div>
+              <div class="example-info">
+                <h4>🛡️ Secure &amp; Retained</h4>
+                <p>2-Year contract, DSL, 60 mo tenure, full security suite ($64.20/mo)</p>
+              </div>
+            </div>
+
+            <div class="example-item" id="exampleBorderline">
+              <div class="example-badge warning">Borderline</div>
+              <div class="example-info">
+                <h4>⚖️ Borderline Risk Case</h4>
+                <p>Month-to-month, Fiber optic, 14 mo tenure, partial add-ons ($80.00/mo)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast">Loaded Example Persona</div>
+
+  <!-- ==========================================================================
+       PAGE 1: FORM VIEW (Vossy-Style Booking Structure)
+       ========================================================================== -->
+  <main id="viewForm" class="page-view active">
+    <div class="page-container form-page-container">
+      
+      <div class="form-header-card">
+        <div class="header-badge">STEP 1 OF 2</div>
+        <h2>Customer Risk Profiler</h2>
+        <p>Enter subscriber contract, service, and billing specifications to evaluate churn probability and trigger an actionable retention playbook.</p>
+      </div>
+
+      <form id="churnForm" autocomplete="off">
+        
+        <!-- Section 1: Demographics -->
+        <div class="card-section">
+          <div class="card-section-header">
+            <div class="card-title-group">
+              <span class="num-badge">1</span>
+              <h3>Subscriber Demographics</h3>
+            </div>
+            <span class="hint">Customer profile</span>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="gender">Gender</label>
+                <select id="gender" name="gender" class="form-control" required>
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="SeniorCitizen">Senior Citizen</label>
+                <select id="SeniorCitizen" name="SeniorCitizen" class="form-control" required>
+                  <option value="0">No (Under 65)</option>
+                  <option value="1">Yes (Senior Citizen)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="Partner">Has Partner / Spouse</label>
+                <select id="Partner" name="Partner" class="form-control" required>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="Dependents">Has Dependents</label>
+                <select id="Dependents" name="Dependents" class="form-control" required>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Account & Contract Terms -->
+        <div class="card-section">
+          <div class="card-section-header">
+            <div class="card-title-group">
+              <span class="num-badge">2</span>
+              <h3>Contract &amp; Account Terms</h3>
+            </div>
+            <span class="hint">Critical churn indicators</span>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <div class="form-group full-width">
+                <label for="tenureRange">
+                  <span>Tenure with Service (Months)</span>
+                  <span class="hint" id="tenureHint">Critical onboarding window (< 6 mos)</span>
+                </label>
+                <div class="slider-container">
+                  <input type="range" id="tenureRange" min="0" max="72" value="2" step="1">
+                  <input type="number" id="tenure" name="tenure" class="slider-val-box" min="0" max="72" value="2" required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="Contract">Contract Agreement</label>
+                <select id="Contract" name="Contract" class="form-control" required>
+                  <option value="Month-to-month">Month-to-month (High Flexibility)</option>
+                  <option value="One year">One year commitment</option>
+                  <option value="Two year">Two year lock-in</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="PaymentMethod">Payment Method</label>
+                <select id="PaymentMethod" name="PaymentMethod" class="form-control" required>
+                  <option value="Electronic check">Electronic check (Manual)</option>
+                  <option value="Mailed check">Mailed check</option>
+                  <option value="Bank transfer (automatic)">Bank transfer (automatic)</option>
+                  <option value="Credit card (automatic)">Credit card (automatic)</option>
+                </select>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="PaperlessBilling">Paperless Billing Enrollment</label>
+                <select id="PaperlessBilling" name="PaperlessBilling" class="form-control" required>
+                  <option value="Yes">Yes (Paperless e-billing active)</option>
+                  <option value="No">No (Paper invoices)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Core Telephony & Internet -->
+        <div class="card-section">
+          <div class="card-section-header">
+            <div class="card-title-group">
+              <span class="num-badge">3</span>
+              <h3>Connectivity &amp; Core Services</h3>
+            </div>
+            <span class="hint">Network tier</span>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="InternetService">Internet Service Type</label>
+                <select id="InternetService" name="InternetService" class="form-control" required>
+                  <option value="Fiber optic">Fiber optic (Gigabit High-Speed)</option>
+                  <option value="DSL">DSL (Broadband)</option>
+                  <option value="No">No Internet Service</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="PhoneService">Landline Phone Service</label>
+                <select id="PhoneService" name="PhoneService" class="form-control" required>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="MultipleLines">Multiple Telephone Lines</label>
+                <select id="MultipleLines" name="MultipleLines" class="form-control" required>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No phone service">No phone service</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Security & Value-Add Services -->
+        <div class="card-section">
+          <div class="card-section-header">
+            <div class="card-title-group">
+              <span class="num-badge">4</span>
+              <h3>Value-Add &amp; Retention Add-ons</h3>
+            </div>
+            <span class="hint">Product stickiness</span>
+          </div>
+          <div class="card-body">
+            <div class="services-checkbox-grid">
+              <label class="checkbox-pill-label" id="lblOnlineSecurity">
+                <input type="checkbox" id="chkOnlineSecurity">
+                <span>Online Security</span>
+              </label>
+
+              <label class="checkbox-pill-label" id="lblOnlineBackup">
+                <input type="checkbox" id="chkOnlineBackup">
+                <span>Online Backup</span>
+              </label>
+
+              <label class="checkbox-pill-label" id="lblDeviceProtection">
+                <input type="checkbox" id="chkDeviceProtection">
+                <span>Device Protection</span>
+              </label>
+
+              <label class="checkbox-pill-label" id="lblTechSupport">
+                <input type="checkbox" id="chkTechSupport">
+                <span>Tech Support</span>
+              </label>
+
+              <label class="checkbox-pill-label" id="lblStreamingTV">
+                <input type="checkbox" id="chkStreamingTV">
+                <span>Streaming TV</span>
+              </label>
+
+              <label class="checkbox-pill-label" id="lblStreamingMovies">
+                <input type="checkbox" id="chkStreamingMovies">
+                <span>Streaming Movies</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Monthly & Total Charges -->
+        <div class="card-section">
+          <div class="card-section-header">
+            <div class="card-title-group">
+              <span class="num-badge">5</span>
+              <h3>Billing &amp; Financials</h3>
+            </div>
+            <span class="hint">Pricing metrics</span>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <div class="form-group">
+                <label for="MonthlyCharges">
+                  <span>Monthly Charges ($)</span>
+                  <span class="hint">Range: $18 - $120</span>
+                </label>
+                <input type="number" id="MonthlyCharges" name="MonthlyCharges" class="form-control" step="0.05" min="18" max="125" value="95.50" required>
+              </div>
+
+              <div class="form-group">
+                <label for="TotalCharges">
+                  <span>Total Charges ($)</span>
+                  <span class="hint" id="autoCalcNotice">Auto-synced</span>
+                </label>
+                <input type="number" id="TotalCharges" name="TotalCharges" class="form-control" step="0.05" min="0" value="191.00" required>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button Card -->
+        <div class="submit-card">
+          <button type="submit" class="btn-predict" id="btnSubmit">
+            <span class="btn-text">ANALYZE CHURN RISK &amp; VIEW DIAGNOSTICS →</span>
+            <div class="spinner" id="btnSpinner"></div>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+
+  <!-- ==========================================================================
+       PAGE 2: PREDICTION VIEW (Medical-Style Diagnostic Dashboard Card)
+       ========================================================================== -->
+  <main id="viewPrediction" class="page-view hidden">
+    <div class="page-container prediction-page-container">
+      
+      <!-- Top Action Navigation Bar -->
+      <div class="prediction-nav-bar">
+        <button type="button" class="btn-back" id="btnBackToFormTop">
+          <span class="back-arrow">←</span>
+          <span>Make Another Prediction</span>
+        </button>
+
+        <div class="nav-timestamp" id="predictionTimestamp">
+          Analysis generated just now
+        </div>
+      </div>
+
+      <!-- Master Diagnostic Container Card -->
+      <div class="master-prediction-card">
+        
+        <!-- Customer Profile Header Card (Image 2 Style) -->
+        <div class="profile-card">
+          <div class="profile-left">
+            <div class="profile-avatar" id="avatarLetter">X</div>
+            <div class="profile-meta">
+              <div class="profile-title-row">
+                <h3 id="profileName">Customer X</h3>
+                <span class="profile-id-chip" id="profileId">ID: #TX-9148</span>
+              </div>
+              <p id="profileSubtext">Telecommunications Consumer Account</p>
+            </div>
+          </div>
+          <div class="profile-chips">
+            <div class="metric-chip">
+              <div class="chip-label">Tenure</div>
+              <div class="chip-val" id="chipTenure">2 mos</div>
+            </div>
+            <div class="metric-chip">
+              <div class="chip-label">Monthly</div>
+              <div class="chip-val" id="chipMonthly">$95.50</div>
+            </div>
+            <div class="metric-chip">
+              <div class="chip-label">Contract</div>
+              <div class="chip-val" id="chipContract">Month-to-month</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Qualitative Prediction Verdict Banner -->
+        <div class="prediction-banner risk-high" id="predictionBanner">
+          <div class="prediction-header">
+            <span class="prediction-label">Retention Diagnostic Verdict</span>
+            <span class="tier-badge tier-high" id="tierBadge">HIGH RISK</span>
+          </div>
+          <h2 class="prediction-title" id="predictionOutcome">More Likely to Churn</h2>
+          <p class="prediction-desc" id="predictionDesc">
+            Subscriber exhibits elevated churn probability exceeding the 36.0% calibrated threshold. Immediate intervention recommended.
+          </p>
+        </div>
+
+        <!-- 2-Column Middle Row: Gauge & Tenure Risk Curve -->
+        <div class="diagnostic-mid-row">
+          
+          <!-- Column 1: Probability Gauge Card -->
+          <div class="probability-card">
+            <div class="card-header-clean">
+              <h4>Churn Likelihood Gauge</h4>
+              <span class="threshold-tag">Threshold: <strong>36.0%</strong></span>
+            </div>
+            
+            <div class="gauge-display-container">
+              <div class="circular-gauge">
+                <svg viewBox="0 0 130 130">
+                  <circle class="gauge-bg" cx="65" cy="65" r="55"></circle>
+                  <circle class="gauge-fill" id="gaugeCircle" cx="65" cy="65" r="55"></circle>
+                </svg>
+                <div class="gauge-center-text">
+                  <div class="gauge-percent" id="gaugeValue">95.1%</div>
+                  <div class="gauge-caption">Probability</div>
+                </div>
+              </div>
+
+              <div class="gauge-details">
+                <div class="detail-row">
+                  <span class="detail-key">Risk Probability:</span>
+                  <span class="detail-val" id="detailProb">0.9508</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Action Threshold:</span>
+                  <span class="detail-val">0.3600</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Risk Classification:</span>
+                  <span class="detail-val" id="detailTier">HIGH</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Inference Latency:</span>
+                  <span class="detail-val" id="detailLatency">< 2 ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Tenure Risk Spline Curve (Image 2 Style) -->
+          <div class="curve-card">
+            <div class="card-header-clean">
+              <h4>Tenure Risk Projection</h4>
+              <div class="curve-legend">
+                <div class="curve-legend-item">
+                  <span class="legend-dot gold"></span>
+                  <span>Month-to-month</span>
+                </div>
+                <div class="curve-legend-item">
+                  <span class="legend-dot navy"></span>
+                  <span>With 1-Yr Lock</span>
+                </div>
+              </div>
+            </div>
+            <div class="curve-svg-container">
+              <svg viewBox="0 0 360 100" preserveAspectRatio="none">
+                <!-- Grid Lines -->
+                <line x1="0" y1="25" x2="360" y2="25" stroke="#F3F4F6" stroke-dasharray="3,3" />
+                <line x1="0" y1="55" x2="360" y2="55" stroke="#F3F4F6" stroke-dasharray="3,3" />
+                <line x1="0" y1="85" x2="360" y2="85" stroke="#E5E5E5" />
+                
+                <!-- Threshold Line -->
+                <line x1="0" y1="50" x2="360" y2="50" stroke="rgba(252, 163, 17, 0.4)" stroke-dasharray="4,2" />
+                
+                <!-- Current Status Spline (Gold) -->
+                <path id="curveCurrent" d="M 10,20 C 80,30 180,50 350,70" fill="none" stroke="#FCA311" stroke-width="3" />
+                <!-- Projected With Retention Playbook (Navy) -->
+                <path id="curveProjected" d="M 10,30 C 80,60 180,78 350,88" fill="none" stroke="#14213D" stroke-width="2.5" stroke-dasharray="5,3" />
+                
+                <!-- Customer X Point -->
+                <circle id="curvePoint" cx="25" cy="22" r="6" fill="#FCA311" stroke="#FFFFFF" stroke-width="2" />
+              </svg>
+            </div>
+            <p class="curve-caption">
+              Position indicates current account risk relative to tenure. Retention interventions bend the trajectory downward into the safe operating zone.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Row 3: Important Factors to Consider (KPI Cards like Image 2 "Examinations") -->
+        <div class="kpi-section">
+          <div class="section-title-bar">
+            <h4>Important Factors to Consider (Key Risk Drivers)</h4>
+            <span class="badge-count">3 Contributing Factors</span>
+          </div>
+
+          <div class="kpi-grid" id="kpiContainer">
+            <!-- Populated dynamically via app.js -->
+          </div>
+        </div>
+
+        <!-- Row 4: Follow-up Actions & Recommended Next Steps (Image 2 "Advice") -->
+        <div class="advice-card">
+          <div class="advice-header">
+            <h4><span>⚡</span> Follow-up Actions &amp; Prescriptive Next Steps</h4>
+            <span class="playbook-badge">RECOMMENDED PLAYBOOK</span>
+          </div>
+
+          <div class="advice-list" id="adviceList">
+            <!-- Populated dynamically via app.js -->
+          </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="prediction-footer-bar">
+          <button type="button" class="btn-back-large" id="btnBackToFormBottom">
+            <span>← Make Another Prediction</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

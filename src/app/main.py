@@ -7,8 +7,9 @@ import logging
 from contextlib import asynccontextmanager
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.validation import CustomerInputSchema, CustomerPredictionResponse
 
@@ -18,6 +19,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 # Model configuration
 MODEL_PATH = os.getenv("MODEL_PATH", "models/final_churn_pipeline.joblib")
 DEFAULT_THRESHOLD = float(os.getenv("DECISION_THRESHOLD", "0.36"))
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 
 @asynccontextmanager
@@ -64,17 +66,39 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Mount static files directory for frontend UI
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 
 @app.get("/", tags=["General"])
-async def root():
-    """Service information and link to API documentation."""
+async def root(request: Request):
+    """
+    Serves interactive HTML Web UI to browsers, or JSON metadata to API clients.
+    """
+    accept = request.headers.get("accept", "")
+    index_file = os.path.join(STATIC_DIR, "index.html")
+    if "text/html" in accept and os.path.exists(index_file):
+        return FileResponse(index_file)
+
     return {
         "service": "Customer Churn Prediction API",
         "version": "1.0.0",
         "status": "online",
         "documentation": "/docs",
+        "web_ui": "/ui",
         "health_check": "/health"
     }
+
+
+@app.get("/ui", tags=["General"])
+@app.get("/dashboard", tags=["General"])
+async def serve_ui():
+    """Customer Churn Interactive Web UI."""
+    index_file = os.path.join(STATIC_DIR, "index.html")
+    if not os.path.exists(index_file):
+        raise HTTPException(status_code=404, detail="UI frontend template not found.")
+    return FileResponse(index_file)
 
 
 @app.get("/health", tags=["General"])

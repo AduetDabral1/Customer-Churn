@@ -40,12 +40,29 @@ def valid_customer_payload():
 
 
 def test_root_endpoint(client):
-    """Assert root endpoint returns 200 and valid service links."""
+    """Assert root endpoint returns 200 and valid service links for JSON requests."""
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "online"
     assert "documentation" in data
+
+
+def test_ui_endpoint(client):
+    """Assert /ui returns 200 OK and renders the HTML dashboard."""
+    response = client.get("/ui")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+    assert "RETENTION IQ" in response.text
+    assert "Customer Risk Profiler" in response.text
+
+
+def test_root_html_negotiation(client):
+    """Assert / returns HTML dashboard when Accept header specifies text/html."""
+    response = client.get("/", headers={"Accept": "text/html,application/xhtml+xml"})
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+    assert "RETENTION IQ" in response.text
 
 
 def test_health_endpoint(client):
