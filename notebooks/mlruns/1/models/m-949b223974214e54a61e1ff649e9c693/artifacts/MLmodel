@@ -1,0 +1,26 @@
+artifact_path: file:f:/Projects 2026/Machine Learning/Customer Churn/notebooks/mlruns/1/models/m-949b223974214e54a61e1ff649e9c693/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+    predict_fn: predict
+    python_version: 3.14.0
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.9.1
+    skops_trusted_types:
+    - numpy.dtype
+    - xgboost.core.Booster
+    - xgboost.sklearn.XGBClassifier
+mlflow_version: 3.16.0
+model_id: m-949b223974214e54a61e1ff649e9c693
+model_size_bytes: 1864604
+model_uuid: m-949b223974214e54a61e1ff649e9c693
+prompts: null
+run_id: 5f2bcadbf74941a29afc361f731305c0
+utc_time_created: '2026-09-14 04:24:19.207896'

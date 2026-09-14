@@ -7,9 +7,11 @@ pandas
 joblib
 mlflow
 pytest
+httpx
 seaborn
 matplotlib
 xgboost
 lightgbm
 optuna
 plotly
+nbformat>=4.2.0

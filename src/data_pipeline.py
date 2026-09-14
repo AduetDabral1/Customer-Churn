@@ -4,92 +4,36 @@ Contains Pydantic Schemas, Data Cleaning, Validation, and Feature Preprocessing.
 """
 import os
 import logging
-from typing import Literal, Optional, Tuple, List
+from typing import Tuple
 import pandas as pd
-from pydantic import BaseModel, Field, ValidationError, ConfigDict, TypeAdapter
+from pydantic import ValidationError
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 
+from src.validation import (
+    CustomerInputSchema,
+    CustomerPredictionResponse,
+    validate_dataframe
+)
+
 logger = logging.getLogger(__name__)
 
-
-# ==========================================
-# 1. Pydantic Schemas (Unified for Batch & API)
-# ==========================================
-class CustomerInputSchema(BaseModel):
-    """
-    Schema representing all customer attributes required for churn prediction.
-    Used for both dataset validation and FastAPI request payload verification.
-    """
-    gender: Literal["Male", "Female"]
-    SeniorCitizen: Literal[0, 1]
-    Partner: Literal["Yes", "No"]
-    Dependents: Literal["Yes", "No"]
-    tenure: int = Field(ge=0, le=100, description="Months customer has stayed with company")
-    PhoneService: Literal["Yes", "No"]
-    MultipleLines: Literal["No phone service", "No", "Yes"]
-    InternetService: Literal["DSL", "Fiber optic", "No"]
-    OnlineSecurity: Literal["No", "Yes", "No internet service"]
-    OnlineBackup: Literal["Yes", "No", "No internet service"]
-    DeviceProtection: Literal["No", "Yes", "No internet service"]
-    TechSupport: Literal["No", "Yes", "No internet service"]
-    StreamingTV: Literal["No", "Yes", "No internet service"]
-    StreamingMovies: Literal["No", "Yes", "No internet service"]
-    Contract: Literal["Month-to-month", "One year", "Two year"]
-    PaperlessBilling: Literal["Yes", "No"]
-    PaymentMethod: Literal[
-        "Electronic check",
-        "Mailed check",
-        "Bank transfer (automatic)",
-        "Credit card (automatic)"
-    ]
-    MonthlyCharges: float = Field(ge=0.0, le=250.0, description="Monthly charges amount")
-    TotalCharges: float = Field(ge=0.0, description="Total charges accumulated")
-    Churn: Optional[Literal["Yes", "No"]] = None
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "gender": "Female",
-                "SeniorCitizen": 0,
-                "Partner": "Yes",
-                "Dependents": "No",
-                "tenure": 12,
-                "PhoneService": "Yes",
-                "MultipleLines": "No",
-                "InternetService": "Fiber optic",
-                "OnlineSecurity": "No",
-                "OnlineBackup": "Yes",
-                "DeviceProtection": "No",
-                "TechSupport": "No",
-                "StreamingTV": "Yes",
-                "StreamingMovies": "No",
-                "Contract": "Month-to-month",
-                "PaperlessBilling": "Yes",
-                "PaymentMethod": "Electronic check",
-                "MonthlyCharges": 85.5,
-                "TotalCharges": 1026.0
-            }
-        }
-    )
-
-
-class CustomerPredictionResponse(BaseModel):
-    """Output schema returned by the model pipeline / FastAPI endpoint."""
-    churn_prediction: int = Field(description="Binary prediction: 1 = At risk of churn, 0 = Stay")
-    churn_probability: float = Field(description="Calibrated probability of churn (0.0 to 1.0)")
-    risk_tier: Literal["LOW", "MEDIUM", "HIGH"] = Field(description="Business risk tier for retention action")
-    threshold_used: float = Field(description="Decision threshold used to assign the prediction")
-
-
-# Cached Pydantic TypeAdapter for batch validation performance
-CUSTOMER_LIST_ADAPTER = TypeAdapter(List[CustomerInputSchema])
+# Re-export schemas for backward compatibility
+__all__ = [
+    "CustomerInputSchema",
+    "CustomerPredictionResponse",
+    "validate_dataframe",
+    "load_and_clean_data",
+    "prepare_splits",
+    "engineer_domain_features",
+    "build_preprocessor"
+]
 
 
 # ==========================================
-# 2. Data Loading, Cleaning & Pydantic Validation
+# 1. Data Loading, Cleaning & Validation
 # ==========================================
 def load_and_clean_data(file_path: str, validate_samples: int = 500) -> pd.DataFrame:
     """
@@ -111,14 +55,11 @@ def load_and_clean_data(file_path: str, validate_samples: int = 500) -> pd.DataF
     # 2. Drop pure identifier column
     df = df.drop(columns=["customerID"], errors="ignore")
 
-    # 3. Native Pydantic validation via TypeAdapter
-    logger.info(f"Validating {validate_samples} records with Pydantic TypeAdapter...")
-    sample_records = df.head(validate_samples).to_dict(orient="records")
+    # 3. Pydantic validation via validation module
     try:
-        CUSTOMER_LIST_ADAPTER.validate_python(sample_records)
-        logger.info(f"All {validate_samples} sampled records passed Pydantic validation successfully!")
-    except ValidationError as e:
-        logger.warning(f"Pydantic validation detected schema discrepancies: {e.errors()[:3]}")
+        validate_dataframe(df, sample_size=validate_samples)
+    except ValidationError:
+        logger.warning("Dataset had validation warnings, continuing with cleaned data.")
 
     return df
 

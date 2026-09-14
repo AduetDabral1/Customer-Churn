@@ -72,7 +72,32 @@ o Logs include:
 
 5. Serving Layer + UI [FastAPI (HTTP endpoint) + Gradio (UI)]
 
+
+In our project, FastAPI acts as the serving layer, it turns our ML model into an API that can receive data and return predictions.
+It's necessary because without it, the model would just sit in Python files, and no external app, script, or user could interact with it.
+
+FastAPI Endpoint
+JSON-based /predict endpoint for programmatic access Returns prediction and probability in structured format
+
+Gradio Web UI (later)
+User-friendly /ui form for manual predictions Visual interface with intuitive controls
+
 6. Containerization (Docker image build)
+Automating Deployment
+Our containerization strategy ensures consistency and reliability:
+
+· Docker image bundles:
+o Application code
+MLflow model artifacts
+o Required dependencies
+
+. GitHub Actions workflow:
+
+o Triggers on pull requests and merges
+o Runs tests to validate changes
+o Builds and pushes images to Docker Hub
+· Ensures reproducible deployment across environments
+
 
 7. CI/CD - GitHub Actions (Buid, smoke tests, push to DockerHub or ECR)
 

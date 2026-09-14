@@ -7,9 +7,12 @@ import pandas as pd
 import numpy as np
 from pydantic import ValidationError
 
-from src.data_pipeline import (
+from src.validation import (
     CustomerInputSchema,
     CustomerPredictionResponse,
+    validate_dataframe
+)
+from src.data_pipeline import (
     load_and_clean_data,
     prepare_splits,
     build_preprocessor
@@ -76,6 +79,16 @@ def test_pydantic_prediction_response():
     assert resp.churn_prediction == 1
     assert 0.0 <= resp.churn_probability <= 1.0
     assert resp.risk_tier == "HIGH"
+
+
+def test_validate_dataframe_function(valid_customer_dict):
+    """Assert validate_dataframe handles valid and invalid DataFrames."""
+    df_valid = pd.DataFrame([valid_customer_dict])
+    assert validate_dataframe(df_valid, sample_size=1) is True
+
+    df_invalid = pd.DataFrame([{"gender": "Unknown", "tenure": -10}])
+    with pytest.raises(ValidationError):
+        validate_dataframe(df_invalid, sample_size=1)
 
 
 def test_data_loader_and_splits():
