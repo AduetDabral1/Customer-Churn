@@ -101,4 +101,5 @@ o Builds and pushes images to Docker Hub
 
 7. CI/CD - GitHub Actions (Buid, smoke tests, push to DockerHub or ECR)
 
+
 8. AWS Deployment + End users (ECS, ECR, ALB, CloudWatch monitoring)
