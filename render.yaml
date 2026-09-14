@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: customer-churn-service
+    env: docker
+    plan: free
+    region: oregon
+    branch: master
+    healthCheckPath: /health
+    envVars:
+      - key: DECISION_THRESHOLD
+        value: "0.36"
